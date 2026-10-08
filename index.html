@@ -96,9 +96,20 @@ body.playing #home{transform:translateX(-25%);opacity:0;pointer-events:none}
 .lbig{font-size:3.2rem;font-weight:900;letter-spacing:-1px;text-shadow:0 3px 0 rgba(0,0,0,.2);line-height:1.1}
 .lsub{font-weight:700;opacity:.9;margin:2px 0 14px}
 .trophy{font-size:3.6rem;animation:bob 1.2s ease-in-out infinite}
-.pv{display:grid;gap:3px;width:min(58vw,250px);aspect-ratio:1;margin:0 auto 18px;padding:7px;border-radius:16px;background:rgba(255,255,255,.28)}
-.pv i{font-style:normal;font-weight:900;color:#3a2a20;background:rgba(255,255,255,.92);border-radius:6px;display:flex;align-items:center;justify-content:center;min-width:0}
+.hpv{display:grid;gap:3px;width:min(58vw,250px);aspect-ratio:1;margin:0 auto 18px;padding:7px;border-radius:16px;background:rgba(255,255,255,.28)}
+.hpv i{font-style:normal;font-weight:900;color:#3a2a20;background:rgba(255,255,255,.92);border-radius:6px;display:flex;align-items:center;justify-content:center;min-width:0}
 .play{width:100%;font-size:1.3rem;padding:16px;background:#fff;color:hsl(var(--ph,12) 70% 45%);box-shadow:0 5px 0 rgba(0,0,0,.18)}
+
+/* performance + visibility fixes */
+#win{backdrop-filter:none;-webkit-backdrop-filter:none;visibility:hidden;transition:opacity .25s,visibility 0s .25s}
+#win.show{backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);visibility:visible;transition:opacity .25s}
+#game{visibility:hidden;transition:transform .35s cubic-bezier(.3,.8,.3,1),opacity .3s,visibility 0s .35s}
+body.playing #game{visibility:visible;transition:transform .35s cubic-bezier(.3,.8,.3,1),opacity .3s}
+#home{transition:transform .35s cubic-bezier(.3,.8,.3,1),opacity .3s,visibility 0s 0s}
+body.playing #home{visibility:hidden;transition:transform .35s cubic-bezier(.3,.8,.3,1),opacity .3s,visibility 0s .35s}
+body.playing #home *{animation:none!important}
+#board,.t{will-change:auto;contain:layout style}
+.rc.pv{min-width:0;min-height:0;width:auto;aspect-ratio:auto;padding:0}
 </style></head><body>
 <div class="screen" id="home">
   <div class="minis"><i style="--h:42"></i><i style="--h:160"></i><i style="--h:195"></i><i style="--h:12"></i></div><h1 class="logo">Block<span>wise</span></h1>
@@ -159,7 +170,7 @@ const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 function place(R){hist.push(JSON.stringify(rects));rects=rects.filter(o=>!hit(o,R));R.id=idc++;newId=R.id;rects.push(R)}
 let PV,TILES=[];const GAP=()=>N>8?3:5;
 function build(){
-  const b=$('board');b.style.gridTemplateColumns=b.style.gridTemplateRows=`repeat(${N},1fr)`;b.style.gap=GAP()+'px';b.style.fontSize=`calc(min(92vw,440px,100dvh - 300px)/${N}*.5)`;
+  const b=$('board');b.style.gridTemplateColumns=b.style.gridTemplateRows=`repeat(${N},minmax(0,1fr))`;b.style.gap=GAP()+'px';b.style.fontSize=`calc(min(92vw,440px,100dvh - 300px)/${N}*.5)`;
   let h='';
   for(let r=0;r<N;r++)for(let c=0;c<N;c++)h+=`<div class="t" style="grid-area:${r+1}/${c+1}">${nums[r*N+c]||''}</div>`;
   h+='<div class="rc pv" id="pv" style="display:none"></div>';
@@ -201,37 +212,43 @@ function home(){
   const next=[...Array(TOTAL).keys()].find(i=>!done(i));let h='';
   if(next===undefined)h='<div class="lcard"><div class="trophy">🏆</div><div class="lbig">All done!</div><div class="lsub">You solved every level. Replay any below.</div></div>';
   else{gen(next);const z=N;let pv='';for(let k=0;k<z*z;k++)pv+=`<i>${nums[k]||''}</i>`;
-    h=`<div class="lcard" style="--ph:${HUES[SIZES.indexOf(z)]}"><div class="lbig">Level ${next+1}</div><div class="lsub">${z}×${z} grid</div><div class="pv" style="grid-template-columns:repeat(${z},1fr);font-size:calc(min(58vw,250px)/${z}*.5)">${pv}</div><button class="big play" data-i="${next}">Play ▶</button></div>`}
+    h=`<div class="lcard" style="--ph:${HUES[SIZES.indexOf(z)]}"><div class="lbig">Level ${next+1}</div><div class="lsub">${z}×${z} grid</div><div class="hpv" style="grid-template-columns:repeat(${z},minmax(0,1fr));grid-template-rows:repeat(${z},minmax(0,1fr));font-size:calc(min(58vw,250px)/${z}*.5)">${pv}</div><button class="big play" data-i="${next}">Play ▶</button></div>`}
   if(nd){h+='<div class="pack"><span>✅ Solved levels</span><small>tap to replay</small></div><div class="lv">';
     for(const i of ds){const z=LV[i];h+=`<button class="lb done" style="--ph:${HUES[SIZES.indexOf(z)]}" data-i="${i}">${i+1}<small>${z}×${z}</small></button>`}
     h+='</div>'}
   $('packs').innerHTML=h;
 }
 $('packs').onclick=e=>{const b=e.target.closest('[data-i]');if(b)open(+b.dataset.i)};
-const bd=$('board');let geo=null,raf=0;
+const bd=$('board');let geo=null,raf=0,pid=null,sx=0,sy=0,moved=false;
 function cellAt(e){const c=Math.max(0,Math.min(N-1,Math.floor((e.clientX-geo.x)/geo.s))),r=Math.max(0,Math.min(N-1,Math.floor((e.clientY-geo.y)/geo.s)));return{r,c}}
-function updPrev(){raf=0;if(!start){PV.style.display='none';return}
+function updPrev(){raf=0;if(!start||!moved||(start.r===cur.r&&start.c===cur.c)){PV.style.display='none';return}
   const P=norm(start,cur);PV.style.gridArea=`${P.r1+1}/${P.c1+1}/${P.r2+2}/${P.c2+2}`;
   PV.classList.toggle('bad',!valid(P));PV.style.display='block'}
-bd.addEventListener('pointerdown',e=>{if(won)return;const q=bd.getBoundingClientRect(),inner=q.width-18;
-  geo={x:q.left+9,y:q.top+9,s:(inner+GAP())/N};start=cur=cellAt(e);try{bd.setPointerCapture(e.pointerId)}catch(_){}updPrev();e.preventDefault()});
-bd.addEventListener('pointermove',e=>{if(!start)return;const p=cellAt(e);if(p.r===cur.r&&p.c===cur.c)return;cur=p;if(!raf)raf=requestAnimationFrame(updPrev)});
-bd.addEventListener('pointerup',()=>{
-  if(!start)return;const R=norm(start,cur),single=start.r===cur.r&&start.c===cur.c;start=cur=null;updPrev();
+function endDrag(){start=cur=null;pid=null;moved=false;if(raf){cancelAnimationFrame(raf);raf=0}PV.style.display='none'}
+bd.addEventListener('pointerdown',e=>{if(won||pid!==null)return;const q=bd.getBoundingClientRect();
+  geo={x:q.left+9,y:q.top+9,s:(q.width-18+GAP())/N};pid=e.pointerId;sx=e.clientX;sy=e.clientY;moved=false;start=cur=cellAt(e);
+  try{bd.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()});
+bd.addEventListener('pointermove',e=>{if(!start||e.pointerId!==pid)return;
+  if(!moved){if(Math.hypot(e.clientX-sx,e.clientY-sy)<12)return;moved=true}
+  const p=cellAt(e);if(p.r===cur.r&&p.c===cur.c)return;cur=p;if(!raf)raf=requestAnimationFrame(updPrev)});
+bd.addEventListener('pointerup',e=>{
+  if(!start||e.pointerId!==pid)return;
+  const end=moved?cur:start,R=norm(start,end),single=start.r===end.r&&start.c===end.c;endDrag();
   const k=single?rectAt(R.r1,R.c1):-1;
   if(k>=0){hist.push(JSON.stringify(rects));rects.splice(k,1)}
   else if(valid(R))place(R);
   render();
 });
 bd.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
-bd.addEventListener('pointercancel',()=>{start=cur=null;updPrev()});
+bd.addEventListener('pointercancel',endDrag);
+bd.addEventListener('lostpointercapture',e=>{if(e.pointerId===pid&&start)endDrag()});
 $('undo').onclick=()=>{if(won||!hist.length)return;rects=JSON.parse(hist.pop());render()};
 $('hbtn').onclick=()=>{
   if(won)return;const miss=sol.filter(S=>!rects.some(R=>R.r1===S.r1&&R.c1===S.c1&&R.r2===S.r2&&R.c2===S.c2));
   if(!miss.length)return;place({...miss[Math.floor(Math.random()*miss.length)]});render();
 };
 $('rst').onclick=()=>{if(won)return;hist.push(JSON.stringify(rects));rects=[];render()};
-$('back').onclick=home;$('menu').onclick=home;
+$('back').onclick=()=>{endDrag();home()};$('menu').onclick=home;
 $('next').onclick=()=>open(lvl+1);
 home();
 </script></body></html>
