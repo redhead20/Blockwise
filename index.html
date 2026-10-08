@@ -90,6 +90,15 @@ body.playing #home{transform:translateX(-25%);opacity:0;pointer-events:none}
 .lb small{font-size:.58rem;font-weight:700;opacity:.75;margin-top:1px}
 .lb.done::after{bottom:auto;top:3px;right:6px}
 .lv{margin-top:14px}
+
+.lcard{margin-top:14px;padding:22px 18px 20px;border-radius:30px;text-align:center;background:linear-gradient(160deg,hsl(var(--ph,12) 90% 70%),hsl(calc(var(--ph,12) + 40) 85% 62%));box-shadow:0 8px 0 hsl(var(--ph,12) 60% 42%),var(--sh);color:#fff;animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-5px)}}
+.lbig{font-size:3.2rem;font-weight:900;letter-spacing:-1px;text-shadow:0 3px 0 rgba(0,0,0,.2);line-height:1.1}
+.lsub{font-weight:700;opacity:.9;margin:2px 0 14px}
+.trophy{font-size:3.6rem;animation:bob 1.2s ease-in-out infinite}
+.pv{display:grid;gap:3px;width:min(58vw,250px);aspect-ratio:1;margin:0 auto 18px;padding:7px;border-radius:16px;background:rgba(255,255,255,.28)}
+.pv i{font-style:normal;font-weight:900;color:#3a2a20;background:rgba(255,255,255,.92);border-radius:6px;display:flex;align-items:center;justify-content:center;min-width:0}
+.play{width:100%;font-size:1.3rem;padding:16px;background:#fff;color:hsl(var(--ph,12) 70% 45%);box-shadow:0 5px 0 rgba(0,0,0,.18)}
 </style></head><body>
 <div class="screen" id="home">
   <div class="minis"><i style="--h:42"></i><i style="--h:160"></i><i style="--h:195"></i><i style="--h:12"></i></div><h1 class="logo">Block<span>wise</span></h1>
@@ -103,7 +112,7 @@ body.playing #home{transform:translateX(-25%);opacity:0;pointer-events:none}
   <div class="stage"><div id="board"></div></div>
   <div class="hint" id="hint">Drag to draw a rectangle. Tap one to remove it.</div>
   <div class="dock"><button class="db" id="undo"><span>↶</span>Undo</button><button class="db" id="hbtn"><span>💡</span>Hint</button></div>
-  <div id="win"><div class="sheet"><div class="party">🎉</div><h2>Level complete!</h2><div class="stars" id="stars"></div><p id="wtxt"></p><button class="big" id="next">Next level</button><button class="big alt" id="menu">All levels</button></div></div>
+  <div id="win"><div class="sheet"><div class="party">🎉</div><h2>Level complete!</h2><div class="stars" id="stars"></div><p id="wtxt"></p><button class="big" id="next">Next level</button><button class="big alt" id="menu">Home</button></div></div>
 </div>
 <script>
 document.addEventListener('gesturestart',e=>e.preventDefault());
@@ -184,17 +193,21 @@ function open(i){
   tick=setInterval(()=>{$('tm').textContent=fmt(Math.round((Date.now()-t0)/1000))},500);
   build();render();
 }
+const HUES=[12,35,48,150,190,265,335];
 function home(){
   clearInterval(tick);document.body.classList.remove('playing');
-  const n=Object.keys(prog.done).length;$('ptxt').textContent=`${n} / ${TOTAL}`;$('pbar').style.width=n/TOTAL*100+'%';
-  const next=[...Array(TOTAL).keys()].find(i=>!done(i));
-  let h='<div class="lv">';
-  for(let i=0;i<TOTAL;i++){const u=unlocked(i),z=LV[i],hu=[12,35,48,150,190,265,335][SIZES.indexOf(z)];
-    h+=`<button class="lb${done(i)?' done':''}${i===next?' cur':''}${u?'':' lock'}" style="--ph:${hu}" data-i="${i}">${u?`${i+1}<small>${z}×${z}</small>`:'🔒'}</button>`}
-  h+='</div>';
+  const ds=Object.keys(prog.done).map(Number).sort((x,y)=>x-y),nd=ds.length;
+  $('ptxt').textContent=`${nd} / ${TOTAL}`;$('pbar').style.width=nd/TOTAL*100+'%';
+  const next=[...Array(TOTAL).keys()].find(i=>!done(i));let h='';
+  if(next===undefined)h='<div class="lcard"><div class="trophy">🏆</div><div class="lbig">All done!</div><div class="lsub">You solved every level. Replay any below.</div></div>';
+  else{gen(next);const z=N;let pv='';for(let k=0;k<z*z;k++)pv+=`<i>${nums[k]||''}</i>`;
+    h=`<div class="lcard" style="--ph:${HUES[SIZES.indexOf(z)]}"><div class="lbig">Level ${next+1}</div><div class="lsub">${z}×${z} grid</div><div class="pv" style="grid-template-columns:repeat(${z},1fr);font-size:calc(min(58vw,250px)/${z}*.5)">${pv}</div><button class="big play" data-i="${next}">Play ▶</button></div>`}
+  if(nd){h+='<div class="pack"><span>✅ Solved levels</span><small>tap to replay</small></div><div class="lv">';
+    for(const i of ds){const z=LV[i];h+=`<button class="lb done" style="--ph:${HUES[SIZES.indexOf(z)]}" data-i="${i}">${i+1}<small>${z}×${z}</small></button>`}
+    h+='</div>'}
   $('packs').innerHTML=h;
 }
-$('packs').onclick=e=>{const b=e.target.closest('.lb');if(b&&unlocked(+b.dataset.i))open(+b.dataset.i)};
+$('packs').onclick=e=>{const b=e.target.closest('[data-i]');if(b)open(+b.dataset.i)};
 const bd=$('board');let geo=null,raf=0;
 function cellAt(e){const c=Math.max(0,Math.min(N-1,Math.floor((e.clientX-geo.x)/geo.s))),r=Math.max(0,Math.min(N-1,Math.floor((e.clientY-geo.y)/geo.s)));return{r,c}}
 function updPrev(){raf=0;if(!start){PV.style.display='none';return}
