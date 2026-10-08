@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Blockwise</title>
 <style>
-:root{box-sizing:border-box;--bg:#f3efe8;--bg2:#e9e3d8;--fg:#262a33;--mut:#7b7f8a;--card:#fffdf9;--tile:#fffdf9;--tileb:#ddd5c6;--acc:#ff6b4a;--fl:80%;--fs:85%;--lt:62%;--sat:72%;--sh:0 6px 18px rgba(60,40,10,.12)}
+:root{box-sizing:border-box;--bmax:440px;--pvmax:250px;--rsv:300px;--bg:#f3efe8;--bg2:#e9e3d8;--fg:#262a33;--mut:#7b7f8a;--card:#fffdf9;--tile:#fffdf9;--tileb:#ddd5c6;--acc:#ff6b4a;--fl:80%;--fs:85%;--lt:62%;--sat:72%;--sh:0 6px 18px rgba(60,40,10,.12)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171c;--bg2:#1d2027;--fg:#f1f2f5;--mut:#8b90a0;--card:#232733;--tile:#232733;--tileb:#333847;--fl:40%;--fs:50%;--lt:55%;--sat:62%;--sh:0 6px 18px rgba(0,0,0,.4)}}
 :root[data-theme="dark"]{--bg:#15171c;--bg2:#1d2027;--fg:#f1f2f5;--mut:#8b90a0;--card:#232733;--tile:#232733;--tileb:#333847;--fl:40%;--fs:50%;--lt:55%;--sat:62%;--sh:0 6px 18px rgba(0,0,0,.4)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -41,7 +41,7 @@ body.playing #home{transform:translateX(-25%);opacity:0;pointer-events:none}
 .ib:active{transform:scale(.92)}
 .ttl{text-align:center;line-height:1.15}.ttl b{font-size:1.15rem}.ttl div{color:var(--mut);font-size:.85rem;font-variant-numeric:tabular-nums}
 .stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
-#board{display:grid;gap:5px;padding:9px;border-radius:22px;background:var(--bg2);box-shadow:inset 0 2px 8px rgba(0,0,0,.08),var(--sh);touch-action:none;user-select:none;-webkit-user-select:none;width:min(100%,calc(100vh - 300px),440px);width:min(100%,calc(100dvh - 300px),440px);aspect-ratio:1}
+#board{display:grid;gap:5px;padding:9px;border-radius:22px;background:var(--bg2);box-shadow:inset 0 2px 8px rgba(0,0,0,.08),var(--sh);touch-action:none;user-select:none;-webkit-user-select:none;width:min(100%,calc(100vh - var(--rsv)),var(--bmax));width:min(100%,calc(100dvh - var(--rsv)),var(--bmax));aspect-ratio:1}
 .t{display:flex;align-items:center;justify-content:center;font-weight:900;font-size:inherit;color:var(--fg);background:var(--tile);border-radius:10px;box-shadow:0 2px 0 var(--tileb);min-width:0;min-height:0}
 .rc{border-radius:12px;pointer-events:none;z-index:1;background:hsl(var(--h) var(--sat) var(--lt));box-shadow:0 3px 0 hsl(var(--h) var(--sat) calc(var(--lt) - 14%)),inset 0 2px 0 rgba(255,255,255,.28);margin:-1px}
 .t.f{background:hsl(var(--h) var(--fs) var(--fl));box-shadow:0 2px 0 hsl(var(--h) var(--fs) calc(var(--fl) - 14%))}
@@ -96,7 +96,7 @@ body.playing #home{transform:translateX(-25%);opacity:0;pointer-events:none}
 .lbig{font-size:3.2rem;font-weight:900;letter-spacing:-1px;text-shadow:0 3px 0 rgba(0,0,0,.2);line-height:1.1}
 .lsub{font-weight:700;opacity:.9;margin:2px 0 14px}
 .trophy{font-size:3.6rem;animation:bob 1.2s ease-in-out infinite}
-.hpv{display:grid;gap:3px;width:min(58vw,250px);aspect-ratio:1;margin:0 auto 18px;padding:7px;border-radius:16px;background:rgba(255,255,255,.28)}
+.hpv{display:grid;gap:3px;width:min(58vw,var(--pvmax));aspect-ratio:1;margin:0 auto 18px;padding:7px;border-radius:16px;background:rgba(255,255,255,.28)}
 .hpv i{font-style:normal;font-weight:900;color:#3a2a20;background:rgba(255,255,255,.92);border-radius:6px;display:flex;align-items:center;justify-content:center;min-width:0}
 .play{width:100%;font-size:1.3rem;padding:16px;background:#fff;color:hsl(var(--ph,12) 70% 45%);box-shadow:0 5px 0 rgba(0,0,0,.18)}
 
@@ -135,6 +135,25 @@ body.playing #home *{animation:none!important}
 .big{background:var(--fg);color:var(--bg);box-shadow:none;border-radius:14px;font-size:1rem;letter-spacing:.01em}
 .big.alt{background:transparent;color:var(--mut);box-shadow:none;margin-top:4px}
 .big:active{transform:scale(.98)}
+
+/* iPad / tablet */
+@media (min-width:700px) and (min-height:700px){
+  :root{--bmax:700px;--pvmax:340px}
+  html{font-size:19px}
+  .screen{padding-left:max(28px,calc((100vw - 700px)/2));padding-right:max(28px,calc((100vw - 700px)/2))}
+  .ib{width:54px;height:54px;border-radius:16px;font-size:1.4rem}
+  .db{max-width:170px}
+  .lv{grid-template-columns:repeat(8,1fr)}
+  .sheet{width:min(86%,440px)}
+  #board{padding:12px;border-radius:26px}
+}
+/* phone in landscape */
+@media (max-height:500px){
+  :root{--rsv:130px}
+  .hint{display:none}
+  .stage{margin-bottom:6px}
+  .dock{margin-top:6px}.db{padding:8px 4px}.db span{display:inline;margin-right:6px}
+}
 </style></head><body>
 <div class="screen" id="home">
   <div class="minis"><i style="--h:42"></i><i style="--h:160"></i><i style="--h:195"></i><i style="--h:12"></i></div><h1 class="logo">Block<span>wise</span></h1>
@@ -194,7 +213,7 @@ const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 function place(R){hist.push(JSON.stringify(rects));rects=rects.filter(o=>!hit(o,R));R.id=idc++;newId=R.id;rects.push(R)}
 let PV,TILES=[];const GAP=()=>N>8?3:5;
 function build(){
-  const b=$('board');b.style.gridTemplateColumns=b.style.gridTemplateRows=`repeat(${N},minmax(0,1fr))`;b.style.gap=GAP()+'px';b.style.fontSize=`calc(min(92vw,440px,100dvh - 300px)/${N}*.5)`;
+  const b=$('board');b.style.gridTemplateColumns=b.style.gridTemplateRows=`repeat(${N},minmax(0,1fr))`;b.style.gap=GAP()+'px';b.style.fontSize=`calc(min(92vw,var(--bmax),100dvh - var(--rsv))/${N}*.5)`;
   let h='';
   for(let r=0;r<N;r++)for(let c=0;c<N;c++)h+=`<div class="t" style="grid-area:${r+1}/${c+1}">${nums[r*N+c]||''}</div>`;
   h+='<div class="rc pv" id="pv" style="display:none"></div>';
@@ -235,7 +254,7 @@ function home(){
   const next=[...Array(TOTAL).keys()].find(i=>!done(i));let h='';
   if(next===undefined)h='<div class="lcard"><div class="trophy">🏆</div><div class="lbig">All done!</div><div class="lsub">You solved every level. Replay any below.</div></div>';
   else{gen(next);const z=N;let pv='';for(let k=0;k<z*z;k++)pv+=`<i>${nums[k]||''}</i>`;
-    h=`<div class="lcard" style="--ph:${HUES[SIZES.indexOf(z)]}"><div class="lbig">Level ${next+1}</div><div class="lsub">${z}×${z} grid</div><div class="hpv" style="grid-template-columns:repeat(${z},minmax(0,1fr));grid-template-rows:repeat(${z},minmax(0,1fr));font-size:calc(min(58vw,250px)/${z}*.5)">${pv}</div><button class="big play" data-i="${next}">Play ▶</button></div>`}
+    h=`<div class="lcard" style="--ph:${HUES[SIZES.indexOf(z)]}"><div class="lbig">Level ${next+1}</div><div class="lsub">${z}×${z} grid</div><div class="hpv" style="grid-template-columns:repeat(${z},minmax(0,1fr));grid-template-rows:repeat(${z},minmax(0,1fr));font-size:calc(min(58vw,var(--pvmax))/${z}*.5)">${pv}</div><button class="big play" data-i="${next}">Play ▶</button></div>`}
   if(nd){h+='<div class="pack"><span>✅ Solved levels</span><small>tap to replay</small></div><div class="lv">';
     for(const i of ds){const z=LV[i];h+=`<button class="lb done" style="--ph:${HUES[SIZES.indexOf(z)]}" data-i="${i}">${i+1}<small>${z}×${z}</small></button>`}
     h+='</div>'}
@@ -249,7 +268,7 @@ function updPrev(){raf=0;if(!start||!moved||(start.r===cur.r&&start.c===cur.c)){
   PV.classList.toggle('bad',!valid(P));PV.style.display='block'}
 function endDrag(){start=cur=null;pid=null;moved=false;if(raf){cancelAnimationFrame(raf);raf=0}PV.style.display='none'}
 bd.addEventListener('pointerdown',e=>{if(won||pid!==null)return;const q=bd.getBoundingClientRect();
-  geo={x:q.left+9,y:q.top+9,s:(q.width-18+GAP())/N};pid=e.pointerId;sx=e.clientX;sy=e.clientY;moved=false;start=cur=cellAt(e);
+  const pd=parseFloat(getComputedStyle(bd).paddingLeft)||9;geo={x:q.left+pd,y:q.top+pd,s:(q.width-2*pd+GAP())/N};pid=e.pointerId;sx=e.clientX;sy=e.clientY;moved=false;start=cur=cellAt(e);
   try{bd.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault()});
 bd.addEventListener('pointermove',e=>{if(!start||e.pointerId!==pid)return;
   if(!moved){if(Math.hypot(e.clientX-sx,e.clientY-sy)<12)return;moved=true}
