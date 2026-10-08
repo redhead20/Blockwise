@@ -110,6 +110,31 @@ body.playing #home{visibility:hidden;transition:transform .35s cubic-bezier(.3,.
 body.playing #home *{animation:none!important}
 #board,.t{will-change:auto;contain:layout style}
 .rc.pv{min-width:0;min-height:0;width:auto;aspect-ratio:auto;padding:0}
+
+/* refined completion */
+.t.sweep{animation:sweep .55s ease both;animation-delay:var(--d,0ms)}
+@keyframes sweep{40%{transform:scale(1.07);filter:brightness(1.12)}100%{transform:none;filter:none}}
+.sheet{border-radius:26px;padding:30px 24px 22px;box-shadow:0 24px 70px rgba(0,0,0,.4);transform:translateY(14px) scale(.97);transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .3s}
+#win.show .sheet{transform:none;opacity:1}
+.chk{width:72px;height:72px}
+.chk circle,.chk path{fill:none;stroke:var(--acc);stroke-linecap:round;stroke-linejoin:round}
+.chk circle{stroke-width:2.5;stroke-dasharray:214;stroke-dashoffset:214;transform:rotate(-90deg);transform-origin:center}
+.chk path{stroke-width:3.5;stroke-dasharray:60;stroke-dashoffset:60}
+#win.show .chk circle{animation:draw .8s cubic-bezier(.4,0,.2,1) .15s forwards}
+#win.show .chk path{animation:draw .45s ease .75s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.eyebrow{font-size:.7rem;letter-spacing:.22em;font-weight:700;color:var(--mut);margin-top:10px}
+.sheet h2{font-size:2rem;font-weight:600;letter-spacing:-.03em;margin:2px 0 0}
+.stars{display:flex;justify-content:center;gap:6px;margin:12px 0 0;font-size:0;letter-spacing:0}
+.stars svg{width:20px;height:20px;stroke:var(--acc);stroke-width:1.6;stroke-linejoin:round;fill:none;opacity:0}
+.stars svg.on{fill:var(--acc)}
+#win.show .stars svg{animation:fadeup .4s ease forwards}
+#win.show .stars svg:nth-child(1){animation-delay:.9s}#win.show .stars svg:nth-child(2){animation-delay:1.05s}#win.show .stars svg:nth-child(3){animation-delay:1.2s}
+@keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.sheet p{font-variant-numeric:tabular-nums;font-size:.9rem;margin:10px 0 20px}
+.big{background:var(--fg);color:var(--bg);box-shadow:none;border-radius:14px;font-size:1rem;letter-spacing:.01em}
+.big.alt{background:transparent;color:var(--mut);box-shadow:none;margin-top:4px}
+.big:active{transform:scale(.98)}
 </style></head><body>
 <div class="screen" id="home">
   <div class="minis"><i style="--h:42"></i><i style="--h:160"></i><i style="--h:195"></i><i style="--h:12"></i></div><h1 class="logo">Block<span>wise</span></h1>
@@ -122,7 +147,7 @@ body.playing #home *{animation:none!important}
   <div class="stage"><div id="board"></div></div>
   <div class="hint" id="hint">Drag to draw a rectangle. Tap one to remove it.</div>
   <div class="dock"><button class="db" id="undo"><span>↶</span>Undo</button><button class="db" id="hbtn"><span>💡</span>Hint</button></div>
-  <div id="win"><div class="sheet"><div class="party">🎉</div><h2>Level complete!</h2><div class="stars" id="stars"></div><p id="wtxt"></p><button class="big" id="next">Next level</button><button class="big alt" id="menu">Home</button></div></div>
+  <div id="win"><div class="sheet"><svg class="chk" viewBox="0 0 80 80"><circle cx="40" cy="40" r="34"/><path d="M26 41l10 10 19-22"/></svg><div class="eyebrow" id="web"></div><h2>Complete</h2><div class="stars" id="stars"></div><p id="wtxt"></p><button class="big" id="next">Next level</button><button class="big alt" id="menu">Home</button></div></div>
 </div>
 <script>
 document.addEventListener('gesturestart',e=>e.preventDefault());
@@ -185,15 +210,15 @@ function render(){
   $('undo').style.opacity=hist.length?1:.4;
   if(cov===N*N&&!won)win();
 }
-function burst(){const w=$('win');w.querySelectorAll('.cf').forEach(e=>e.remove());const cols=['#ff6b4a','#ffd166','#06d6a0','#4cc9f0','#ff5e7e'];
-  for(let i=0;i<60;i++){const d=document.createElement('div');d.className='cf';d.style.cssText=`left:${Math.random()*100}%;background:${cols[i%5]};animation-duration:${1.6+Math.random()*1.6}s;animation-delay:${Math.random()*.5}s`;w.appendChild(d)}}
 function win(){
   won=true;clearInterval(tick);const s=Math.round((Date.now()-t0)/1000);
   const best=prog.done[lvl];if(best===undefined||s<best)prog.done[lvl]=s;store.set(prog);
-  $('wtxt').textContent=`Level ${lvl+1} in ${fmt(s)}`+(best!==undefined&&s>=best?` · best ${fmt(best)}`:'');
+  $('web').textContent=`LEVEL ${lvl+1}  ·  ${N}×${N}`;$('wtxt').textContent=`Solved in ${fmt(s)}`+(best!==undefined&&s>=best?`  ·  Best ${fmt(best)}`:'');
   $('next').style.display=lvl<TOTAL-1?'block':'none';
-  const q=N*N,st=s<=q*2?3:s<=q*4?2:1;$('stars').textContent='⭐'.repeat(st)+'☆'.repeat(3-st);
-  setTimeout(()=>{$('win').classList.add('show');burst()},350);
+  const q=N*N,st=s<=q*2?3:s<=q*4?2:1;const SV='<svg viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9.5 16.5,14.5 18.5,22 12,18 5.5,22 7.5,14.5 2,9.5 9,9"/></svg>';
+  $('stars').innerHTML=[0,1,2].map(k=>SV.replace('<svg','<svg class="'+(k<st?'on':'off')+'"')).join('');
+  TILES.forEach((t,k)=>{t.style.setProperty('--d',((Math.floor(k/N)+k%N)*45)+'ms');t.classList.add('sweep')});
+  setTimeout(()=>$('win').classList.add('show'),300+N*2*45+250);
 }
 function open(i){
   lvl=i;gen(i);rects=[];hist=[];won=false;start=cur=null;
