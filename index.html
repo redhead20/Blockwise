@@ -173,8 +173,19 @@ document.addEventListener('gesturestart',e=>e.preventDefault());
 document.addEventListener('contextmenu',e=>e.preventDefault());
 const TOTAL=70,PER=10,COUNTS=[8,12,12,12,13,13],SIZES=[5,6,7,8,9,10],MAXA=[6,8,10,12,12,12],ALLOWED=[1,2,3,4,5,6,7,8,10,12];
 const $=id=>document.getElementById(id);
-let mem={};const store={get(){try{return JSON.parse(localStorage.getItem('blockwise4')||'null')||mem}catch(e){return mem}},set(v){mem=v;try{localStorage.setItem('blockwise2',JSON.stringify(v))}catch(e){}}};
-let prog=store.get();if(!prog.done)prog={done:{}};
+const KEY='blockwise4';
+const merge=(a,b)=>{const o={done:{}};for(const x of [a,b]){if(x&&x.done)for(const k in x.done){const v=x.done[k];if(o.done[k]===undefined||v<o.done[k])o.done[k]=v}}
+  const c=[a&&a.cur,b&&b.cur].filter(Boolean).sort((p,q)=>(q.at||0)-(p.at||0))[0];if(c)o.cur=c;return o};
+const rd={ls(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}},
+  ck(){try{const m=document.cookie.match(/(?:^|; )bw4=([^;]*)/);return m?{done:JSON.parse(decodeURIComponent(m[1]))}:null}catch(e){return null}}};
+const idb={open(){return new Promise((res,rej)=>{const r=indexedDB.open('blockwise',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej()})},
+  async get(){try{const db=await this.open();return await new Promise(res=>{const q=db.transaction('kv').objectStore('kv').get(KEY);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch(e){return null}},
+  async set(v){try{const db=await this.open();db.transaction('kv','readwrite').objectStore('kv').put(v,KEY)}catch(e){}}};
+const store={set(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}
+  try{document.cookie='bw4='+encodeURIComponent(JSON.stringify(v.done))+';max-age=31536000;path=/;SameSite=Lax'}catch(e){}
+  idb.set(JSON.parse(JSON.stringify(v)))}};
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+let prog=merge(rd.ls(),rd.ck());
 const done=i=>prog.done[i]!==undefined;
 const unlocked=i=>i===0||done(i-1)||done(i);
 const sizeOf=i=>SIZES[Math.floor(i/PER)];
@@ -227,11 +238,12 @@ function render(){
   const cov=rects.reduce((s,R)=>s+area(R),0);
   $('hint').textContent=cov===N*N?'':`${N*N-cov} squares left`;
   $('undo').style.opacity=hist.length?1:.4;
-  if(cov===N*N&&!won)win();
+  if(cov===N*N&&!won)win();else if(!won)saveCur();
 }
+function saveCur(){if(won||lvl===undefined||done(lvl))return;prog.cur={lvl,rects,el:Date.now()-t0,at:Date.now()};store.set(prog)}
 function win(){
   won=true;clearInterval(tick);const s=Math.round((Date.now()-t0)/1000);
-  const best=prog.done[lvl];if(best===undefined||s<best)prog.done[lvl]=s;store.set(prog);
+  const best=prog.done[lvl];if(best===undefined||s<best)prog.done[lvl]=s;delete prog.cur;store.set(prog);
   $('web').textContent=`LEVEL ${lvl+1}  ·  ${N}×${N}`;$('wtxt').textContent=`Solved in ${fmt(s)}`+(best!==undefined&&s>=best?`  ·  Best ${fmt(best)}`:'');
   $('next').style.display=lvl<TOTAL-1?'block':'none';
   const q=N*N,st=s<=q*2?3:s<=q*4?2:1;const SV='<svg viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9.5 16.5,14.5 18.5,22 12,18 5.5,22 7.5,14.5 2,9.5 9,9"/></svg>';
@@ -240,10 +252,11 @@ function win(){
   setTimeout(()=>$('win').classList.add('show'),300+N*2*45+250);
 }
 function open(i){
-  lvl=i;gen(i);rects=[];hist=[];won=false;start=cur=null;
+  lvl=i;gen(i);rects=[];hist=[];won=false;start=cur=null;let el=0;
+  if(prog.cur&&prog.cur.lvl===i&&!done(i)){rects=prog.cur.rects||[];el=prog.cur.el||0;idc=Math.max(idc,...rects.map(r=>r.id+1),0)}
   $('lt').textContent='Level '+(i+1);$('win').classList.remove('show');
   document.body.classList.add('playing');
-  t0=Date.now();clearInterval(tick);$('tm').textContent='0:00';
+  t0=Date.now()-el;clearInterval(tick);$('tm').textContent=fmt(Math.round(el/1000));
   tick=setInterval(()=>{$('tm').textContent=fmt(Math.round((Date.now()-t0)/1000))},500);
   build();render();
 }
@@ -254,7 +267,7 @@ function home(){
   const next=[...Array(TOTAL).keys()].find(i=>!done(i));let h='';
   if(next===undefined)h='<div class="lcard"><div class="trophy">🏆</div><div class="lbig">All done!</div><div class="lsub">You solved every level. Replay any below.</div></div>';
   else{gen(next);const z=N;let pv='';for(let k=0;k<z*z;k++)pv+=`<i>${nums[k]||''}</i>`;
-    h=`<div class="lcard" style="--ph:${HUES[SIZES.indexOf(z)]}"><div class="lbig">Level ${next+1}</div><div class="lsub">${z}×${z} grid</div><div class="hpv" style="grid-template-columns:repeat(${z},minmax(0,1fr));grid-template-rows:repeat(${z},minmax(0,1fr));font-size:calc(min(58vw,var(--pvmax))/${z}*.5)">${pv}</div><button class="big play" data-i="${next}">Play ▶</button></div>`}
+    h=`<div class="lcard" style="--ph:${HUES[SIZES.indexOf(z)]}"><div class="lbig">Level ${next+1}</div><div class="lsub">${z}×${z} grid</div><div class="hpv" style="grid-template-columns:repeat(${z},minmax(0,1fr));grid-template-rows:repeat(${z},minmax(0,1fr));font-size:calc(min(58vw,var(--pvmax))/${z}*.5)">${pv}</div><button class="big play" data-i="${next}">${prog.cur&&prog.cur.lvl===next?'Resume ▶':'Play ▶'}</button></div>`}
   if(nd){h+='<div class="pack"><span>✅ Solved levels</span><small>tap to replay</small></div><div class="lv">';
     for(const i of ds){const z=LV[i];h+=`<button class="lb done" style="--ph:${HUES[SIZES.indexOf(z)]}" data-i="${i}">${i+1}<small>${z}×${z}</small></button>`}
     h+='</div>'}
@@ -292,5 +305,13 @@ $('hbtn').onclick=()=>{
 $('rst').onclick=()=>{if(won)return;hist.push(JSON.stringify(rects));rects=[];render()};
 $('back').onclick=()=>{endDrag();home()};$('menu').onclick=home;
 $('next').onclick=()=>open(lvl+1);
-home();
+document.addEventListener('visibilitychange',()=>{
+  if(!document.body.classList.contains('playing')||won)return;
+  if(document.hidden){saveCur();clearInterval(tick)}
+  else{t0=Date.now()-(prog.cur?prog.cur.el:0);clearInterval(tick);tick=setInterval(()=>{$('tm').textContent=fmt(Math.round((Date.now()-t0)/1000))},500)}
+});
+addEventListener('pagehide',()=>{if(document.body.classList.contains('playing'))saveCur()});
+if(prog.cur&&!done(prog.cur.lvl))open(prog.cur.lvl);else home();
+idb.get().then(v=>{if(!v)return;const m=merge(prog,v);
+  if(Object.keys(m.done).length>Object.keys(prog.done).length){prog=m;store.set(prog);if(!document.body.classList.contains('playing'))home()}});
 </script></body></html>
